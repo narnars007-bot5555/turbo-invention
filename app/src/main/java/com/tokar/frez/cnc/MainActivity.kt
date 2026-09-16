@@ -16,7 +16,9 @@ import androidx.compose.ui.unit.sp
 import com.tokar.frez.cnc.data.db.AppDatabase
 import com.tokar.frez.cnc.data.repository.CncRepository
 import com.tokar.frez.cnc.ui.*
-import com.tokar.frez.cnc.ui.screens.*
+import com.tokar.frez.cnc.ui.screens.dashboard.DashboardScreen
+import com.tokar.frez.cnc.ui.screens.gear.GearCuttingScreen
+import com.tokar.frez.cnc.ui.screens.grinding.GrindingScreen
 import com.tokar.frez.cnc.ui.screens.catalog.MachineCatalogScreen
 import com.tokar.frez.cnc.ui.screens.gcode.GCodeGeneratorScreen
 import com.tokar.frez.cnc.ui.screens.iso.IsoToleranceScreen
