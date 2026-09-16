@@ -10,7 +10,8 @@ class CncRepository(
     private val isoToleranceDao: IsoToleranceDao,
     private val threadDao: ThreadDao,
     private val cncCycleDao: CncCycleDao,
-    private val toolFixtureDao: ToolFixtureDao
+    private val toolFixtureDao: ToolFixtureDao,
+    private val machineDao: MachineDao
 ) {
 
     private var cachedMaterials: List<MaterialEntity>? = null
@@ -49,4 +50,9 @@ class CncRepository(
             emit(list)
         }
     }
+
+    fun getMachineClasses(): Flow<List<String>> = machineDao.getMachineClasses()
+    fun getCncSystemsForClass(machineClass: String): Flow<List<String>> = machineDao.getCncSystemsForClass(machineClass)
+    fun getMachinesByClassAndCnc(machineClass: String, cncSystem: String): Flow<List<MachineEntity>> = machineDao.getMachinesByClassAndCnc(machineClass, cncSystem)
+    suspend fun getMachineById(id: Long): MachineEntity? = machineDao.getMachineById(id)
 }

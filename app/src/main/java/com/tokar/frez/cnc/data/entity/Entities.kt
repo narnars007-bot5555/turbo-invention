@@ -1,6 +1,7 @@
 package com.tokar.frez.cnc.data.entity
 
 import androidx.room.Entity
+import androidx.room.Index
 import androidx.room.PrimaryKey
 
 @Entity(tableName = "materials")
@@ -14,7 +15,12 @@ data class MaterialEntity(
     val fzCoeff: Double           // fz multiplier
 )
 
-@Entity(tableName = "iso_tolerances")
+@Entity(
+    tableName = "iso_tolerances",
+    indices = [
+        Index(value = ["fieldName", "nominalRangeMin", "nominalRangeMax"])
+    ]
+)
 data class IsoToleranceEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val nominalRangeMin: Double,  // mm
