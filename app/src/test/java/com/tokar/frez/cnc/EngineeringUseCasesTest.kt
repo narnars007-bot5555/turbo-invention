@@ -1,5 +1,6 @@
 package com.tokar.frez.cnc
 
+import com.tokar.frez.cnc.data.entity.MachineEntity
 import com.tokar.frez.cnc.domain.usecase.*
 import org.junit.Assert.*
 import org.junit.Test
@@ -92,5 +93,24 @@ class EngineeringUseCasesTest {
         assertEquals(50.0, mating.nominalSize, 0.001)
         assertEquals(FitType.CLEARANCE, mating.fitType)
         assertTrue(mating.maxClearanceUm > 0)
+    }
+
+    @Test
+    fun testGetMachineDetailsUseCase() {
+        val useCase = GetMachineDetailsUseCase()
+        val entity = MachineEntity(
+            id = 10,
+            machineClass = "5-Axis MC",
+            cncSystem = "HAAS",
+            modelName = "HAAS UMC-750",
+            description = "5-axis machining center",
+            setupGuideStepsJson = "[\"Step 1: Power Up\",\"Step 2: Spindle Warmup\"]",
+            gcodeHandbookJson = "{\"G00\":\"Rapid\",\"G01\":\"Feed\"}"
+        )
+
+        val info = useCase.parseMachineDetails(entity)
+        assertEquals("HAAS UMC-750", info.machine.modelName)
+        assertTrue(info.setupSteps.isNotEmpty())
+        assertTrue(info.gcodeHandbook.isNotEmpty())
     }
 }
