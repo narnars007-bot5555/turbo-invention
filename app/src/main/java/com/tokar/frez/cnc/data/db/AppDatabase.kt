@@ -17,9 +17,10 @@ import kotlinx.coroutines.launch
         IsoToleranceEntity::class,
         ThreadEntity::class,
         CncCycleEntity::class,
-        ToolFixtureEntity::class
+        ToolFixtureEntity::class,
+        MachineEntity::class
     ],
-    version = 1,
+    version = 2,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -29,6 +30,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun threadDao(): ThreadDao
     abstract fun cncCycleDao(): CncCycleDao
     abstract fun toolFixtureDao(): ToolFixtureDao
+    abstract fun machineDao(): MachineDao
 
     companion object {
         @Volatile

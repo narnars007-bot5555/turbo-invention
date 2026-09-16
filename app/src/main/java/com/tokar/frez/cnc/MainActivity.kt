@@ -13,20 +13,41 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.tokar.frez.cnc.ui.MainViewModel
+import com.tokar.frez.cnc.data.db.AppDatabase
+import com.tokar.frez.cnc.data.repository.CncRepository
+import com.tokar.frez.cnc.ui.*
 import com.tokar.frez.cnc.ui.screens.*
+import com.tokar.frez.cnc.ui.screens.catalog.MachineCatalogScreen
+import com.tokar.frez.cnc.ui.screens.gcode.GCodeGeneratorScreen
+import com.tokar.frez.cnc.ui.screens.iso.IsoToleranceScreen
+import com.tokar.frez.cnc.ui.screens.turning.TurningMillingScreen
+import com.tokar.frez.cnc.ui.screens.wear.ToolWearScreen
 import com.tokar.frez.cnc.ui.theme.*
 
 class MainActivity : ComponentActivity() {
 
-    private val viewModel: MainViewModel by viewModels()
+    private val mainViewModel: MainViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        val db = AppDatabase.getDatabase(applicationContext)
+        val repository = CncRepository(
+            db.materialDao(),
+            db.isoToleranceDao(),
+            db.threadDao(),
+            db.cncCycleDao(),
+            db.toolFixtureDao(),
+            db.machineDao()
+        )
+
+        val catalogViewModel = MachineCatalogViewModel(repository)
+        val toolWearViewModel = ToolWearViewModel()
+        val gcodeViewModel = GCodeViewModel()
+
         setContent {
             TokarFrezCncTheme {
-                val state by viewModel.uiState.collectAsState()
+                val state by mainViewModel.uiState.collectAsState()
 
                 Scaffold(
                     topBar = {
@@ -36,11 +57,21 @@ class MainActivity : ComponentActivity() {
                             contentColor = IndustrialCyan,
                             edgePadding = 8.dp
                         ) {
-                            val tabs = listOf("Обзор", "1. Токарка/Фреза", "2. Шлифовка", "3. Зубья", "4. Оснастка", "5. ISO Допуски", "6. СЧПУ", "7. Нормы/Брак")
+                            val tabs = listOf(
+                                "Обзор",
+                                "1. Токарка/Фреза",
+                                "2. Шлифовка",
+                                "3. Зубья",
+                                "4. ISO Допуски",
+                                "5. Каталог Станков",
+                                "6. Износ инструмента",
+                                "7. G-код & Backplot"
+                            )
                             tabs.forEachIndexed { idx, title ->
                                 Tab(
                                     selected = state.selectedModuleIndex == idx,
-                                    onClick = { viewModel.selectModule(idx) },
+                                    onClick = { mainViewModel.selectModule(idx) },
+                                    modifier = Modifier.defaultMinSize(minHeight = 56.dp),
                                     text = {
                                         Text(
                                             text = title,
@@ -61,15 +92,15 @@ class MainActivity : ComponentActivity() {
                             .background(IndustrialDarkBg)
                     ) {
                         when (state.selectedModuleIndex) {
-                            0 -> DashboardScreen(onSelectModule = { viewModel.selectModule(it) })
-                            1 -> TurningMillingScreen(viewModel, state)
-                            2 -> GrindingScreen(viewModel, state)
-                            3 -> GearCuttingScreen(viewModel, state)
-                            4 -> ToolFixtureScreen()
-                            5 -> IsoStandardsScreen(viewModel, state)
-                            6 -> CncSetupScreen(viewModel, state)
-                            7 -> TimeAndDefectsScreen(viewModel, state)
-                            else -> DashboardScreen(onSelectModule = { viewModel.selectModule(it) })
+                            0 -> DashboardScreen(onSelectModule = { mainViewModel.selectModule(it) })
+                            1 -> TurningMillingScreen(mainViewModel, state)
+                            2 -> GrindingScreen(mainViewModel, state)
+                            3 -> GearCuttingScreen(mainViewModel, state)
+                            4 -> IsoToleranceScreen(mainViewModel, state)
+                            5 -> MachineCatalogScreen(catalogViewModel)
+                            6 -> ToolWearScreen(toolWearViewModel)
+                            7 -> GCodeGeneratorScreen(gcodeViewModel)
+                            else -> DashboardScreen(onSelectModule = { mainViewModel.selectModule(it) })
                         }
                     }
                 }
