@@ -114,9 +114,49 @@
               "radius_dp": 22,
               "description": "Сброс ошибок и текущего состояния управляющей программы.",
               "category": "Управление"
+            },
+            {
+              "id": "btn_siemens_auto",
+              "title": "Режим AUTO",
+              "x_percent": 65.0,
+              "y_percent": 80.0,
+              "radius_dp": 22,
+              "description": "Автоматическое исполнение программы.",
+              "category": "Режимы работы"
+            },
+            {
+              "id": "btn_siemens_cycle_start",
+              "title": "NC START",
+              "x_percent": 85.0,
+              "y_percent": 88.0,
+              "radius_dp": 28,
+              "description": "Запуск программы ЧПУ Sinumerik.",
+              "category": "Управление"
             }
           ],
-          "scenarios": []
+          "scenarios": [
+            {
+              "id": "siemens_reset_run",
+              "title": "Сброс ошибки и запуск программы NC",
+              "steps": [
+                {
+                  "step": 1,
+                  "instruction": "Нажмите RESET для сброса активной аварии.",
+                  "target_hotspot": "btn_siemens_reset"
+                },
+                {
+                  "step": 2,
+                  "instruction": "Активируйте режим AUTO.",
+                  "target_hotspot": "btn_siemens_auto"
+                },
+                {
+                  "step": 3,
+                  "instruction": "Нажмите NC START.",
+                  "target_hotspot": "btn_siemens_cycle_start"
+                }
+              ]
+            }
+          ]
         }
       ]
     },
@@ -130,8 +170,39 @@
           "name": "TNC 640",
           "type": "Фрезерная обработка",
           "image_panel": "panels/tnc_640.jpg",
-          "hotspots": [],
-          "scenarios": []
+          "hotspots": [
+            {
+              "id": "btn_tnc_start",
+              "title": "NC Start (Пуск)",
+              "x_percent": 80.0,
+              "y_percent": 85.0,
+              "radius_dp": 26,
+              "description": "Старт выполнения кадра или программы TNC.",
+              "category": "Управление"
+            },
+            {
+              "id": "btn_tnc_stop",
+              "title": "NC Stop (Стоп)",
+              "x_percent": 70.0,
+              "y_percent": 85.0,
+              "radius_dp": 26,
+              "description": "Приостановка обработки.",
+              "category": "Управление"
+            }
+          ],
+          "scenarios": [
+            {
+              "id": "tnc_start_prog",
+              "title": "Запуск программы на стойке TNC 640",
+              "steps": [
+                {
+                  "step": 1,
+                  "instruction": "Нажмите клавишу NC Start для начала выполнения кадра.",
+                  "target_hotspot": "btn_tnc_start"
+                }
+              ]
+            }
+          ]
         }
       ]
     },
@@ -145,8 +216,44 @@
           "name": "M80 Series",
           "type": "Многоосевая обработка",
           "image_panel": "panels/mitsubishi_m80.jpg",
-          "hotspots": [],
-          "scenarios": []
+          "hotspots": [
+            {
+              "id": "btn_m80_memory",
+              "title": "MEMORY Mode",
+              "x_percent": 60.0,
+              "y_percent": 75.0,
+              "radius_dp": 22,
+              "description": "Режим автоисполнения из памяти M80.",
+              "category": "Режимы работы"
+            },
+            {
+              "id": "btn_m80_start",
+              "title": "CYCLE START",
+              "x_percent": 85.0,
+              "y_percent": 85.0,
+              "radius_dp": 28,
+              "description": "Запуск управляющей программы.",
+              "category": "Управление"
+            }
+          ],
+          "scenarios": [
+            {
+              "id": "m80_start",
+              "title": "Запуск обработки Mitsubishi M80",
+              "steps": [
+                {
+                  "step": 1,
+                  "instruction": "Выберите MEMORY mode.",
+                  "target_hotspot": "btn_m80_memory"
+                },
+                {
+                  "step": 2,
+                  "instruction": "Нажмите CYCLE START.",
+                  "target_hotspot": "btn_m80_start"
+                }
+              ]
+            }
+          ]
         }
       ]
     },
@@ -160,8 +267,44 @@
           "name": "GSK 980TDi",
           "type": "Токарная обработка",
           "image_panel": "panels/gsk_980tdi.jpg",
-          "hotspots": [],
-          "scenarios": []
+          "hotspots": [
+            {
+              "id": "btn_gsk_auto",
+              "title": "AUTO Mode",
+              "x_percent": 58.0,
+              "y_percent": 80.0,
+              "radius_dp": 22,
+              "description": "Автоматический режим GSK 980TDi.",
+              "category": "Режимы работы"
+            },
+            {
+              "id": "btn_gsk_start",
+              "title": "CYCLE START (Запуск)",
+              "x_percent": 86.0,
+              "y_percent": 86.0,
+              "radius_dp": 28,
+              "description": "Запуск обработки GSK.",
+              "category": "Управление"
+            }
+          ],
+          "scenarios": [
+            {
+              "id": "gsk_start",
+              "title": "Запуск обработки на стойке GSK",
+              "steps": [
+                {
+                  "step": 1,
+                  "instruction": "Включите режим AUTO.",
+                  "target_hotspot": "btn_gsk_auto"
+                },
+                {
+                  "step": 2,
+                  "instruction": "Запустите обработку кнопкой CYCLE START.",
+                  "target_hotspot": "btn_gsk_start"
+                }
+              ]
+            }
+          ]
         }
       ]
     }
