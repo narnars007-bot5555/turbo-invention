@@ -43,6 +43,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "tokar_frez_cnc_db"
                 )
+                    .createFromAsset("database/cnc_preload.db")
                     .addCallback(DatabaseCallback())
                     .fallbackToDestructiveMigration()
                     .build()

@@ -86,7 +86,39 @@ fun MachineCatalogScreen(viewModel: MachineCatalogViewModel) {
             Spacer(modifier = Modifier.height(12.dp))
         }
 
-        // 3. Machine Card (2-Tab Layout)
+        // 3. Select Machine Model (Step 3)
+        if (state.selectedCncSystem != null) {
+            Text("3. Выберите модель станка:", color = TextSecondary, fontSize = 14.sp)
+            Spacer(modifier = Modifier.height(6.dp))
+            val availableMachines = if (state.machines.isNotEmpty()) state.machines else listOf(
+                MachineEntity(
+                    id = 1,
+                    machineClass = state.selectedClass ?: "5-Axis MC",
+                    cncSystem = state.selectedCncSystem ?: "HAAS",
+                    modelName = "${state.selectedCncSystem} Model 1",
+                    description = "Высокоточный обрабатывающий центр с ЧПУ ${state.selectedCncSystem}.",
+                    setupGuideStepsJson = """["1. Включение и запуск", "2. Выход в ноль", "3. Привязка"]""",
+                    gcodeHandbookJson = """{"G00": "Быстрый ход", "G01": "Рабочий ход"}"""
+                )
+            )
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                availableMachines.forEach { machine ->
+                    Button(
+                        onClick = { viewModel.selectMachine(machine) },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = if (state.selectedMachine?.id == machine.id || state.selectedMachine?.modelName == machine.modelName) IndustrialCyan else IndustrialCardBg,
+                            contentColor = if (state.selectedMachine?.id == machine.id || state.selectedMachine?.modelName == machine.modelName) IndustrialDarkBg else TextPrimary
+                        ),
+                        modifier = Modifier.fillMaxWidth().defaultMinSize(minHeight = 56.dp)
+                    ) {
+                        Text(machine.modelName, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
+            Spacer(modifier = Modifier.height(12.dp))
+        }
+
+        // 4. Machine Card Detail View (2-Tab Layout)
         val dummyMachine = MachineEntity(
             id = 1,
             machineClass = state.selectedClass ?: "5-Axis MC",

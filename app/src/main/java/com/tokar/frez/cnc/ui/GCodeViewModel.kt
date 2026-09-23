@@ -16,7 +16,8 @@ data class GCodeUiState(
     val feedRate: Double = 0.25,
     val cncSystem: CncSystemType = CncSystemType.FANUC,
     val generatedGCode: String = "",
-    val toolpathPoints: List<ToolpathPoint> = emptyList()
+    val toolpathPoints: List<ToolpathPoint> = emptyList(),
+    val validationIssues: List<GCodeValidationIssue> = emptyList()
 )
 
 class GCodeViewModel(
@@ -65,8 +66,9 @@ class GCodeViewModel(
         )
         val code = gcodeEngine.generateCycleGCode(params, s.cncSystem)
         val points = gcodeEngine.parseToolpath(code)
+        val issues = gcodeEngine.validateGCode(code, s.cncSystem)
         _uiState.update {
-            it.copy(generatedGCode = code, toolpathPoints = points)
+            it.copy(generatedGCode = code, toolpathPoints = points, validationIssues = issues)
         }
     }
 }

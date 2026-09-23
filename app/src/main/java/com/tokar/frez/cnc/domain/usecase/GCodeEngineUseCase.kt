@@ -8,6 +8,16 @@ data class ToolpathPoint(
     val isRapid: Boolean // true for G0 (rapid/green), false for G1/G2/G3 (feed/blue)
 )
 
+data class GCodeValidationIssue(
+    val lineNumber: Int,
+    val severity: IssueSeverity, // ERROR, WARNING
+    val message: String
+)
+
+enum class IssueSeverity {
+    ERROR, WARNING
+}
+
 data class GCodeGenerationParams(
     val cycleType: String, // G71/CYCLE95, G76/CYCLE97, G83/CYCLE83
     val startDiameterMm: Double,
@@ -125,6 +135,65 @@ class GCodeEngineUseCase {
                   Q474=-${p.lengthMm} ; LENGTH
             """.trimIndent()
         }
+    }
+
+    fun validateGCode(gcodeText: String, system: CncSystemType): List<GCodeValidationIssue> {
+        val issues = mutableListOf<GCodeValidationIssue>()
+        val lines = gcodeText.split("\n")
+
+        var feedrateSet = false
+        var spindleSet = false
+
+        for ((index, rawLine) in lines.withIndex()) {
+            val lineNum = index + 1
+            val line = rawLine.uppercase().takeWhile { it != '(' && it != ';' }.trim()
+            if (line.isEmpty()) continue
+
+            if (line.contains("F")) feedrateSet = true
+            if (line.contains("S")) spindleSet = true
+
+            // Check feedrate requirement on cutting moves
+            if ((line.contains("G01") || line.contains("G1 ") || line.contains("G02") || line.contains("G03")) && !line.contains("F") && !feedrateSet) {
+                issues.add(GCodeValidationIssue(lineNum, IssueSeverity.ERROR, "Кадр резания без указания подачи F."))
+            }
+
+            // Check arc center parameters
+            if (line.contains("G02") || line.contains("G2") || line.contains("G03") || line.contains("G3")) {
+                if (!line.contains("R") && !line.contains("I") && !line.contains("J") && !line.contains("K")) {
+                    issues.add(GCodeValidationIssue(lineNum, IssueSeverity.ERROR, "Круговая интерполяция требует задания радиуса R или векторов I, J, K."))
+                }
+            }
+
+            // Check system-specific syntax issues
+            when (system) {
+                CncSystemType.FANUC -> {
+                    if (line.contains("CYCLE95") || line.contains("CYCLE97")) {
+                        issues.add(GCodeValidationIssue(lineNum, IssueSeverity.ERROR, "Цикл CYCLE... не поддерживается на стойках Fanuc. Используйте G71/G76."))
+                    }
+                }
+                CncSystemType.SINUMERIK -> {
+                    if (line.contains("G71") || line.contains("G76")) {
+                        issues.add(GCodeValidationIssue(lineNum, IssueSeverity.WARNING, "На Sinumerik рекомендуется использовать CYCLE95/CYCLE97 вместо G71/G76."))
+                    }
+                }
+                CncSystemType.HAAS -> {
+                    if (line.contains("G43.4") && !line.contains("G143")) {
+                        issues.add(GCodeValidationIssue(lineNum, IssueSeverity.WARNING, "На Haas для TCPC коррекции 5 осей используется команда G143 вместо G43.4."))
+                    }
+                }
+                CncSystemType.HEIDENHAIN -> {
+                    if (line.contains("G00") || line.contains("G01")) {
+                        issues.add(GCodeValidationIssue(lineNum, IssueSeverity.WARNING, "Для Heidenhain ISO синтаксис G-кода требует спец. формата или CYCL DEF."))
+                    }
+                }
+            }
+        }
+
+        if (!spindleSet) {
+            issues.add(GCodeValidationIssue(0, IssueSeverity.WARNING, "В программе не задана частота вращения шпинделя (S...)."))
+        }
+
+        return issues
     }
 
     private fun generatePeckDrilling(p: GCodeGenerationParams, system: CncSystemType): String {

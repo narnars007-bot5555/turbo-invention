@@ -88,6 +88,32 @@ fun GCodeGeneratorScreen(viewModel: GCodeViewModel) {
 
         Spacer(modifier = Modifier.height(12.dp))
 
+        // Validation Issues
+        if (state.validationIssues.isNotEmpty()) {
+            Text("Результаты проверки G-кода для ${state.cncSystem.name}:", color = IndustrialYellow, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+            Spacer(modifier = Modifier.height(6.dp))
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = IndustrialCardBg),
+                shape = RoundedCornerShape(8.dp)
+            ) {
+                Column(modifier = Modifier.padding(12.dp)) {
+                    state.validationIssues.forEach { issue ->
+                        val color = if (issue.severity == com.tokar.frez.cnc.domain.usecase.IssueSeverity.ERROR) IndustrialRed else IndustrialOrange
+                        val prefix = if (issue.severity == com.tokar.frez.cnc.domain.usecase.IssueSeverity.ERROR) "❌ ОШИБКА" else "⚠️ ПРЕДУПРЕЖДЕНИЕ"
+                        val lineStr = if (issue.lineNumber > 0) " (Кадр ${issue.lineNumber})" else ""
+                        Text(
+                            text = "$prefix$lineStr: ${issue.message}",
+                            color = color,
+                            fontSize = 13.sp,
+                            modifier = Modifier.padding(vertical = 2.dp)
+                        )
+                    }
+                }
+            }
+            Spacer(modifier = Modifier.height(12.dp))
+        }
+
         // Generated Code Output
         Text("Сгенерированная управляющая программа (УП):", color = IndustrialGreen, fontSize = 14.sp, fontWeight = FontWeight.Bold)
         Spacer(modifier = Modifier.height(6.dp))
