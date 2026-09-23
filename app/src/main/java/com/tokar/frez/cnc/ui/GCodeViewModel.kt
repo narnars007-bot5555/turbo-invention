@@ -19,12 +19,20 @@ data class GCodeUiState(
     val toolpathPoints: List<ToolpathPoint> = emptyList(),
     val parsedBlocks: List<ParsedGCodeBlock> = emptyList(),
     val estimatedTimeSec: Double = 0.0,
-    val totalDistanceMm: Double = 0.0
+    val totalDistanceMm: Double = 0.0,
+    val selectedMachine: MachineProfile = MachineProfiles.default,
+    val toolNumber: Int = 1,
+    val spindleRpm: Int = 1000,
+    val stockAllowancePerSideMm: Double = 3.0,
+    val cuttingSpeedVc: Double = 200.0,
+    val validationErrors: List<String> = emptyList(),
+    val validationWarnings: List<String> = emptyList()
 )
 
 class GCodeViewModel(
     private val gcodeEngine: GCodeEngineUseCase = GCodeEngineUseCase(),
-    private val gcodeParser: GCodeParserUseCase = GCodeParserUseCase()
+    private val gcodeParser: GCodeParserUseCase = GCodeParserUseCase(),
+    private val safeGenerator: GCodeGeneratorUseCase = GCodeGeneratorUseCase()
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(GCodeUiState())
@@ -57,6 +65,16 @@ class GCodeViewModel(
         generateAndParse()
     }
 
+    fun selectMachine(profile: MachineProfile) {
+        _uiState.update { it.copy(selectedMachine = profile) }
+        generateAndParse()
+    }
+
+    fun updateSafetyInputs(toolNumber: Int = _uiState.value.toolNumber, spindleRpm: Int = _uiState.value.spindleRpm, stockAllowance: Double = _uiState.value.stockAllowancePerSideMm, cuttingSpeedVc: Double = _uiState.value.cuttingSpeedVc) {
+        _uiState.update { it.copy(toolNumber = toolNumber, spindleRpm = spindleRpm, stockAllowancePerSideMm = stockAllowance, cuttingSpeedVc = cuttingSpeedVc) }
+        generateAndParse()
+    }
+
     fun parseCustomGCode(rawCode: String) {
         val parseResult = gcodeParser.parseProgram(rawCode)
         _uiState.update {
@@ -80,16 +98,22 @@ class GCodeViewModel(
             depthOfCutMm = s.depthOfCutMm,
             feedRate = s.feedRate
         )
-        val code = gcodeEngine.generateCycleGCode(params, s.cncSystem)
-        val parseResult = gcodeParser.parseProgram(code)
+        val safeResult = safeGenerator.generate(
+            GCodeValidationInput(params, s.toolNumber, s.spindleRpm, s.stockAllowancePerSideMm, s.cuttingSpeedVc),
+            s.selectedMachine
+        )
+        val code = safeResult.program.orEmpty()
+        val parseResult = if (code.isBlank()) null else gcodeParser.parseProgram(code)
 
         _uiState.update {
             it.copy(
                 generatedGCode = code,
-                toolpathPoints = parseResult.toolpathPoints,
-                parsedBlocks = parseResult.blocks,
-                estimatedTimeSec = parseResult.estimatedTimeSec,
-                totalDistanceMm = parseResult.totalDistanceMm
+                toolpathPoints = parseResult?.toolpathPoints.orEmpty(),
+                parsedBlocks = parseResult?.blocks.orEmpty(),
+                estimatedTimeSec = parseResult?.estimatedTimeSec ?: 0.0,
+                totalDistanceMm = parseResult?.totalDistanceMm ?: 0.0,
+                validationErrors = safeResult.errors,
+                validationWarnings = safeResult.warnings
             )
         }
     }

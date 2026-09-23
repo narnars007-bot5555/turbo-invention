@@ -200,8 +200,7 @@ class MainActivity : ComponentActivity() {
                         } else {
                             when (state.selectedCategory) {
                                 0 -> when (state.selectedModuleIndex) {
-                                    0 -> DashboardScreen(
-                                        viewModel = mainViewModel,
+                                    0 -> VisualDashboardScreen(
                                         state = state,
                                         onNavigateToCategory = { cat, subMod ->
                                             mainViewModel.selectCategory(cat)
