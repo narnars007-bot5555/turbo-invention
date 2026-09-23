@@ -8,6 +8,10 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.History
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -15,6 +19,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.tokar.frez.cnc.ui.AppThemeMode
 import com.tokar.frez.cnc.ui.MainUiState
 import com.tokar.frez.cnc.ui.MainViewModel
 import com.tokar.frez.cnc.ui.canvas.*
@@ -22,21 +27,12 @@ import com.tokar.frez.cnc.ui.theme.*
 
 @Composable
 fun DashboardScreen(
-    onSelectModule: (Int) -> Unit,
-    modifier: Modifier = Modifier
+    viewModel: MainViewModel,
+    state: MainUiState,
+    onNavigateToCategory: (Int, Int) -> Unit
 ) {
-    val modules = listOf(
-        "1. Токарно-фрезерные расчеты" to "Vc, n, f, fz, MRR, Pc, Ra/Rz, Конусы",
-        "2. Шлифование и абразив" to "Vs, Vw, ae, Декодер кругов, Правка Ud/Ed",
-        "3. Зубообработка" to "Эвольвента m/z, Длина нормали W, Зубодолбление",
-        "4. База инструмента и оснастки" to "Резцы, фрезы, оправки BT40/HSK, микрометры",
-        "5. ISO Стандарты и Допуски" to "ISO 286-1 валы/отверстия, Резьбы ISO 965, Пластины ISO 1832",
-        "6. Наладка СЧПУ и G-коды" to "Fanuc, Sinumerik, Haas, Heidenhain, Привязка G54, T1-T9",
-        "7. Нормирование Tшт и Брак" to "Машинное время, Стойкость Тейлора, Матрица брака"
-    )
-
     Column(
-        modifier = modifier
+        modifier = Modifier
             .fillMaxSize()
             .background(IndustrialDarkBg)
             .padding(16.dp)
@@ -51,31 +47,205 @@ fun DashboardScreen(
         Text(
             text = "Инженерно-технологический комплекс машиностроителя",
             color = TextSecondary,
-            fontSize = 14.sp
+            fontSize = 13.sp
         )
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(14.dp))
 
-        modules.forEachIndexed { index, (title, subtitle) ->
+        // Global Search Bar
+        OutlinedTextField(
+            value = state.globalSearchQuery,
+            onValueChange = { viewModel.setGlobalSearchQuery(it) },
+            placeholder = { Text("Поиск по модулям, материалам, G-кодам...") },
+            leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = IndustrialCyan) },
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = IndustrialCyan,
+                unfocusedBorderColor = TextSecondary.copy(alpha = 0.5f)
+            ),
+            modifier = Modifier.fillMaxWidth()
+        )
+
+        // Search Results display if searching
+        if (state.searchResults.isNotEmpty()) {
+            Spacer(modifier = Modifier.height(8.dp))
+            Card(
+                colors = CardDefaults.cardColors(containerColor = IndustrialCardBg),
+                shape = RoundedCornerShape(8.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(modifier = Modifier.padding(12.dp)) {
+                    Text("РЕЗУЛЬТАТЫ ПОИСКА:", color = IndustrialYellow, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                    state.searchResults.forEach { item ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { onNavigateToCategory(item.categoryIndex, item.subModuleIndex) }
+                                .padding(vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(item.title, color = IndustrialCyan, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                                Text(item.description, color = TextPrimary, fontSize = 12.sp)
+                            }
+                        }
+                        HorizontalDivider(color = IndustrialDarkBg)
+                    }
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(14.dp))
+
+        // Favorites Section (Избранное)
+        if (state.favorites.isNotEmpty()) {
+            Text("ИЗБРАННЫЕ МОДУЛИ", color = IndustrialYellow, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+            Spacer(modifier = Modifier.height(6.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                state.favorites.take(3).forEach { fav ->
+                    AssistChip(
+                        onClick = {
+                            when (fav) {
+                                "Токарно-фрезерные расчеты" -> onNavigateToCategory(0, 1)
+                                "ISO 286-1 Допуски" -> onNavigateToCategory(3, 4)
+                                "Черновое G71/CYCLE95" -> onNavigateToCategory(1, 7)
+                                else -> onNavigateToCategory(0, 1)
+                            }
+                        },
+                        label = { Text(fav, fontSize = 11.sp) },
+                        leadingIcon = { Icon(Icons.Default.Star, contentDescription = null, tint = IndustrialYellow, modifier = Modifier.size(14.dp)) },
+                        colors = AssistChipDefaults.assistChipColors(containerColor = IndustrialCardBg, labelColor = TextPrimary)
+                    )
+                }
+            }
+            Spacer(modifier = Modifier.height(14.dp))
+        }
+
+        // Recent Calculations Section (Последние использованные расчёты)
+        if (state.recentCalculations.isNotEmpty()) {
+            Text("ПОСЛЕДНИЕ РАСЧЕТЫ", color = IndustrialGreen, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+            Spacer(modifier = Modifier.height(6.dp))
+            Card(
+                colors = CardDefaults.cardColors(containerColor = IndustrialCardBg),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(modifier = Modifier.padding(12.dp)) {
+                    state.recentCalculations.take(2).forEach { rec ->
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(Icons.Default.History, contentDescription = null, tint = IndustrialCyan, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Column {
+                                Text("${rec.title} (${rec.category})", color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                                Text(rec.summary, color = TextSecondary, fontSize = 11.sp)
+                            }
+                        }
+                    }
+                }
+            }
+            Spacer(modifier = Modifier.height(16.dp))
+        }
+
+        // 5 Primary Categories Cards
+        Text("КАТЕГОРИИ ФУНКЦИЙ", color = IndustrialCyan, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+        Spacer(modifier = Modifier.height(8.dp))
+
+        val categories = listOf(
+            Triple("1. РАСЧЁТЫ (Точение, Фрезерование, Шлифовка, Зубья)", "Vc, n, f, fz, MRR, Pc, Ra/Rz, Конусы, Модуль эвольвенты", 0),
+            Triple("2. G-КОД И ЧПУ (Безопасный генератор и Backplotter)", "G71/G76/G83, Проверка безопасности, Пошаговый симулятор, .nc экспорт", 1),
+            Triple("3. ИНСТРУМЕНТ И ИЗНОС (Журнал T01-T99 и ISO 1832)", "Учет износа X/Z, Прогноз ресурса %, Замена пластин, Расшифровка ISO", 2),
+            Triple("4. ISO И СПРАВОЧНИКИ (Допуски ISO 286-1 и Резьбы)", "Предельные отклонения ES/EI, Метрические резьбы ISO 965, Матрица брака", 3),
+            Triple("5. СТАНКИ И ОСНАСТКА (Каталог и Наладка WCS)", "HAAS, Fanuc, Sinumerik, Выход в ноль, Привязка G54, Оправки BT40/HSK", 4)
+        )
+
+        categories.forEach { (title, desc, catIdx) ->
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(vertical = 6.dp)
-                    .clickable { onSelectModule(index + 1) },
+                    .clickable { onNavigateToCategory(catIdx, 1) },
                 colors = CardDefaults.cardColors(containerColor = IndustrialCardBg),
                 shape = RoundedCornerShape(8.dp)
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
-                    Text(
-                        text = title,
-                        color = IndustrialYellow,
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold
-                    )
+                    Text(title, color = IndustrialYellow, fontSize = 16.sp, fontWeight = FontWeight.Bold)
                     Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = subtitle,
-                        color = TextPrimary,
-                        fontSize = 13.sp
+                    Text(desc, color = TextPrimary, fontSize = 13.sp)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun SettingsScreen(viewModel: MainViewModel, state: MainUiState) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(IndustrialDarkBg)
+            .padding(16.dp)
+            .verticalScroll(rememberScrollState())
+    ) {
+        Text("НАСТРОЙКИ ПРИЛОЖЕНИЯ И ИНТЕРФЕЙСА", color = IndustrialCyan, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(containerColor = IndustrialCardBg)
+        ) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Text("Тема оформления:", color = IndustrialYellow, fontWeight = FontWeight.Bold)
+                Spacer(modifier = Modifier.height(8.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    FilterChip(
+                        selected = state.appTheme == AppThemeMode.DARK,
+                        onClick = { viewModel.setAppTheme(AppThemeMode.DARK) },
+                        label = { Text("Промышленная Тёмная") }
+                    )
+                    FilterChip(
+                        selected = state.appTheme == AppThemeMode.LIGHT,
+                        onClick = { viewModel.setAppTheme(AppThemeMode.LIGHT) },
+                        label = { Text("Светлая") }
+                    )
+                    FilterChip(
+                        selected = state.appTheme == AppThemeMode.SYSTEM,
+                        onClick = { viewModel.setAppTheme(AppThemeMode.SYSTEM) },
+                        label = { Text("Системная") }
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+                Text("Формат десятичных чисел:", color = IndustrialYellow, fontWeight = FontWeight.Bold)
+                Spacer(modifier = Modifier.height(8.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    FilterChip(
+                        selected = state.decimalPrecision == 2,
+                        onClick = { viewModel.setDecimalPrecision(2) },
+                        label = { Text("2 знака (0.01)") }
+                    )
+                    FilterChip(
+                        selected = state.decimalPrecision == 3,
+                        onClick = { viewModel.setDecimalPrecision(3) },
+                        label = { Text("3 знака (0.001)") }
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+                Text("Система единиц измерения:", color = IndustrialYellow, fontWeight = FontWeight.Bold)
+                Spacer(modifier = Modifier.height(8.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    FilterChip(
+                        selected = state.isMetric,
+                        onClick = { viewModel.setMetricUnits(true) },
+                        label = { Text("Метрическая (мм, м/мин)") }
+                    )
+                    FilterChip(
+                        selected = !state.isMetric,
+                        onClick = { viewModel.setMetricUnits(false) },
+                        label = { Text("Дюймовая (inch, SFM)") }
                     )
                 }
             }

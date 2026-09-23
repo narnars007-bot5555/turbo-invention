@@ -18,9 +18,11 @@ import kotlinx.coroutines.launch
         ThreadEntity::class,
         CncCycleEntity::class,
         ToolFixtureEntity::class,
-        MachineEntity::class
+        MachineEntity::class,
+        CalculationHistoryEntity::class,
+        ToolWearJournalEntity::class
     ],
-    version = 2,
+    version = 3,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -31,6 +33,8 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun cncCycleDao(): CncCycleDao
     abstract fun toolFixtureDao(): ToolFixtureDao
     abstract fun machineDao(): MachineDao
+    abstract fun calculationHistoryDao(): CalculationHistoryDao
+    abstract fun toolWearJournalDao(): ToolWearJournalDao
 
     companion object {
         @Volatile
@@ -64,13 +68,97 @@ abstract class AppDatabase : RoomDatabase() {
             private suspend fun populateDatabase(db: AppDatabase) {
                 db.materialDao().insertAll(
                     listOf(
-                        MaterialEntity(name = "Сталь 20 / 45 (Unalloyed Steel)", isoGroup = "P", tensileStrength = 600.0, hardnessHb = 180.0, vcCoeff = 1.0, fzCoeff = 1.0),
-                        MaterialEntity(name = "40Х / 30ХГСА (Alloy Steel)", isoGroup = "P", tensileStrength = 850.0, hardnessHb = 250.0, vcCoeff = 0.8, fzCoeff = 0.9),
-                        MaterialEntity(name = "12Х18Н10Т / 08Х18Н10 (Stainless Steel)", isoGroup = "M", tensileStrength = 650.0, hardnessHb = 200.0, vcCoeff = 0.6, fzCoeff = 0.8),
-                        MaterialEntity(name = "СЧ20 / ВЧ50 (Cast Iron)", isoGroup = "K", tensileStrength = 300.0, hardnessHb = 220.0, vcCoeff = 1.1, fzCoeff = 1.1),
-                        MaterialEntity(name = "Д16Т / АМг6 (Aluminum Alloy)", isoGroup = "N", tensileStrength = 450.0, hardnessHb = 120.0, vcCoeff = 3.0, fzCoeff = 1.5),
-                        MaterialEntity(name = "ВТ6 / ВТ20 (Titanium Alloy)", isoGroup = "S", tensileStrength = 950.0, hardnessHb = 320.0, vcCoeff = 0.35, fzCoeff = 0.7),
-                        MaterialEntity(name = "Сталь ШХ15 (Hardened Steel 60 HRC)", isoGroup = "H", tensileStrength = 2000.0, hardnessHb = 600.0, vcCoeff = 0.4, fzCoeff = 0.6)
+                        MaterialEntity(
+                            name = "09Г2С (Конструкционная низколегированная)",
+                            isoGroup = "P",
+                            tensileStrength = 490.0,
+                            hardnessHb = 170.0,
+                            hardnessRange = "140-190 HB",
+                            vcCoeff = 1.05,
+                            fzCoeff = 1.0,
+                            recVcMin = 140.0,
+                            recVcMax = 280.0,
+                            recFeedMin = 0.12,
+                            recFeedMax = 0.40
+                        ),
+                        MaterialEntity(
+                            name = "40Х / 30ХГСА (Конструкционная легированная)",
+                            isoGroup = "P",
+                            tensileStrength = 850.0,
+                            hardnessHb = 250.0,
+                            hardnessRange = "200-280 HB",
+                            vcCoeff = 0.85,
+                            fzCoeff = 0.9,
+                            recVcMin = 120.0,
+                            recVcMax = 220.0,
+                            recFeedMin = 0.10,
+                            recFeedMax = 0.35
+                        ),
+                        MaterialEntity(
+                            name = "12Х18Н10Т / 08Х18Н10 (Нержавеющая аустенитная)",
+                            isoGroup = "M",
+                            tensileStrength = 650.0,
+                            hardnessHb = 200.0,
+                            hardnessRange = "170-230 HB",
+                            vcCoeff = 0.60,
+                            fzCoeff = 0.8,
+                            recVcMin = 80.0,
+                            recVcMax = 160.0,
+                            recFeedMin = 0.08,
+                            recFeedMax = 0.25
+                        ),
+                        MaterialEntity(
+                            name = "СЧ20 / ВЧ50 (Серый и высокопрочный чугун)",
+                            isoGroup = "K",
+                            tensileStrength = 300.0,
+                            hardnessHb = 220.0,
+                            hardnessRange = "180-250 HB",
+                            vcCoeff = 1.10,
+                            fzCoeff = 1.1,
+                            recVcMin = 150.0,
+                            recVcMax = 300.0,
+                            recFeedMin = 0.15,
+                            recFeedMax = 0.45
+                        ),
+                        MaterialEntity(
+                            name = "Д16Т / АМг6 (Алюминиевый деформируемый сплав)",
+                            isoGroup = "N",
+                            tensileStrength = 450.0,
+                            hardnessHb = 120.0,
+                            hardnessRange = "95-130 HB",
+                            vcCoeff = 3.00,
+                            fzCoeff = 1.5,
+                            recVcMin = 300.0,
+                            recVcMax = 900.0,
+                            recFeedMin = 0.15,
+                            recFeedMax = 0.60
+                        ),
+                        MaterialEntity(
+                            name = "ВТ6 / ВТ20 (Титановый сплав α+β)",
+                            isoGroup = "S",
+                            tensileStrength = 950.0,
+                            hardnessHb = 320.0,
+                            hardnessRange = "300-360 HB",
+                            vcCoeff = 0.35,
+                            fzCoeff = 0.7,
+                            recVcMin = 40.0,
+                            recVcMax = 80.0,
+                            recFeedMin = 0.06,
+                            recFeedMax = 0.20
+                        ),
+                        MaterialEntity(
+                            name = "Сталь ШХ15 / ХВГ (Закаленная 60 HRC)",
+                            isoGroup = "H",
+                            tensileStrength = 2000.0,
+                            hardnessHb = 600.0,
+                            hardnessRange = "55-64 HRC",
+                            vcCoeff = 0.40,
+                            fzCoeff = 0.6,
+                            recVcMin = 50.0,
+                            recVcMax = 110.0,
+                            recFeedMin = 0.05,
+                            recFeedMax = 0.18
+                        )
                     )
                 )
 

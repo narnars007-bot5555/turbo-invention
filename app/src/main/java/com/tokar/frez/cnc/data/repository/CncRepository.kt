@@ -11,7 +11,9 @@ class CncRepository(
     private val threadDao: ThreadDao,
     private val cncCycleDao: CncCycleDao,
     private val toolFixtureDao: ToolFixtureDao,
-    private val machineDao: MachineDao
+    private val machineDao: MachineDao,
+    private val calculationHistoryDao: CalculationHistoryDao? = null,
+    private val toolWearJournalDao: ToolWearJournalDao? = null
 ) {
 
     private var cachedMaterials: List<MaterialEntity>? = null
@@ -25,6 +27,10 @@ class CncRepository(
             cachedMaterials = list
             emit(list)
         }
+    }
+
+    suspend fun findMaterialByName(query: String): MaterialEntity? {
+        return materialDao.findByName(query)
     }
 
     fun getThreadsFlow(): Flow<List<ThreadEntity>> = flow {
@@ -55,4 +61,17 @@ class CncRepository(
     fun getCncSystemsForClass(machineClass: String): Flow<List<String>> = machineDao.getCncSystemsForClass(machineClass)
     fun getMachinesByClassAndCnc(machineClass: String, cncSystem: String): Flow<List<MachineEntity>> = machineDao.getMachinesByClassAndCnc(machineClass, cncSystem)
     suspend fun getMachineById(id: Long): MachineEntity? = machineDao.getMachineById(id)
+
+    // Calculation History
+    fun getCalculationHistoryFlow(): Flow<List<CalculationHistoryEntity>>? = calculationHistoryDao?.getAllHistory()
+    suspend fun saveCalculationHistory(entry: CalculationHistoryEntity): Long = calculationHistoryDao?.insert(entry) ?: 0L
+    suspend fun searchHistory(query: String): List<CalculationHistoryEntity> = calculationHistoryDao?.searchHistory(query) ?: emptyList()
+    suspend fun deleteHistoryById(id: Long) { calculationHistoryDao?.deleteById(id) }
+    suspend fun clearHistory() { calculationHistoryDao?.clearAll() }
+
+    // Tool Wear Journal
+    fun getToolWearJournalFlow(): Flow<List<ToolWearJournalEntity>>? = toolWearJournalDao?.getAllWearLogs()
+    suspend fun getToolWearLogsForTool(toolId: String): List<ToolWearJournalEntity> = toolWearJournalDao?.getLogsForTool(toolId) ?: emptyList()
+    suspend fun saveToolWearLog(entry: ToolWearJournalEntity): Long = toolWearJournalDao?.insert(entry) ?: 0L
+    suspend fun deleteToolWearLogById(id: Long) { toolWearJournalDao?.deleteById(id) }
 }

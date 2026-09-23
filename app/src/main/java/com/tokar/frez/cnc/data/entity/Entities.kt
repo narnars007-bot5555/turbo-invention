@@ -7,12 +7,17 @@ import androidx.room.PrimaryKey
 @Entity(tableName = "materials")
 data class MaterialEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
-    val name: String,             // Марка стали
+    val name: String,             // Марка стали (e.g. 09Г2С, 40Х, 12Х18Н10Т, Д16Т, ВТ6, СЧ20)
     val isoGroup: String,         // ISO 513: P, M, K, N, S, H
     val tensileStrength: Double,  // Rm (MPa)
     val hardnessHb: Double,       // HB / HRC
-    val vcCoeff: Double,          // Vc multiplier
-    val fzCoeff: Double           // fz multiplier
+    val hardnessRange: String = "180-220 HB", // Диапазон твердости
+    val vcCoeff: Double = 1.0,    // Vc multiplier
+    val fzCoeff: Double = 1.0,    // fz multiplier
+    val recVcMin: Double = 100.0, // Рекомендуемая Vc min (м/мин)
+    val recVcMax: Double = 250.0, // Рекомендуемая Vc max (м/мин)
+    val recFeedMin: Double = 0.1, // Рекомендуемая подача min (мм/об)
+    val recFeedMax: Double = 0.35 // Рекомендуемая подача max (мм/об)
 )
 
 @Entity(
@@ -58,4 +63,33 @@ data class ToolFixtureEntity(
     val name: String,             // PCLNR 2525M12, BT40-ER32-100, Штангенциркуль
     val standardCode: String,     // ISO 1832, DIN 69871, ГОСТ 166-89
     val specifications: String
+)
+
+@Entity(tableName = "calculation_history")
+data class CalculationHistoryEntity(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val timestamp: Long = System.currentTimeMillis(),
+    val operationName: String,
+    val category: String,
+    val materialName: String,
+    val machineName: String,
+    val toolName: String,
+    val inputParamsJson: String,
+    val resultSummaryJson: String,
+    val technologistComment: String
+)
+
+@Entity(tableName = "tool_wear_journal")
+data class ToolWearJournalEntity(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val toolId: String,               // T01 .. T99
+    val partCount: Int,
+    val operatingTimeMin: Double,
+    val measuredWearXMm: Double,
+    val measuredWearZMm: Double,
+    val measuredWearYMm: Double,
+    val lastMeasuredTimestamp: Long = System.currentTimeMillis(),
+    val cause: String,                // Абразивный, Адгезионный, Термический, Выкрашивание, Поломка
+    val remainingLifePercent: Double, // 0 - 100%
+    val comment: String
 )

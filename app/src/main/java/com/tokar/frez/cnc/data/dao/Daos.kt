@@ -15,6 +15,9 @@ interface MaterialDao {
     @Query("SELECT * FROM materials WHERE isoGroup = :isoGroup")
     suspend fun getMaterialsByGroup(isoGroup: String): List<MaterialEntity>
 
+    @Query("SELECT * FROM materials WHERE name LIKE '%' || :query || '%' LIMIT 1")
+    suspend fun findByName(query: String): MaterialEntity?
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertAll(materials: List<MaterialEntity>)
 }
@@ -65,4 +68,37 @@ interface ToolFixtureDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertAll(tools: List<ToolFixtureEntity>)
+}
+
+@Dao
+interface CalculationHistoryDao {
+    @Query("SELECT * FROM calculation_history ORDER BY timestamp DESC")
+    fun getAllHistory(): Flow<List<CalculationHistoryEntity>>
+
+    @Query("SELECT * FROM calculation_history WHERE operationName LIKE '%' || :query || '%' OR materialName LIKE '%' || :query || '%' ORDER BY timestamp DESC")
+    suspend fun searchHistory(query: String): List<CalculationHistoryEntity>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insert(entry: CalculationHistoryEntity): Long
+
+    @Query("DELETE FROM calculation_history WHERE id = :id")
+    suspend fun deleteById(id: Long)
+
+    @Query("DELETE FROM calculation_history")
+    suspend fun clearAll()
+}
+
+@Dao
+interface ToolWearJournalDao {
+    @Query("SELECT * FROM tool_wear_journal ORDER BY lastMeasuredTimestamp DESC")
+    fun getAllWearLogs(): Flow<List<ToolWearJournalEntity>>
+
+    @Query("SELECT * FROM tool_wear_journal WHERE toolId = :toolId ORDER BY lastMeasuredTimestamp DESC")
+    suspend fun getLogsForTool(toolId: String): List<ToolWearJournalEntity>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insert(entry: ToolWearJournalEntity): Long
+
+    @Query("DELETE FROM tool_wear_journal WHERE id = :id")
+    suspend fun deleteById(id: Long)
 }
