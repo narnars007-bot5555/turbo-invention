@@ -113,4 +113,32 @@ class EngineeringUseCasesTest {
         assertTrue(info.setupSteps.isNotEmpty())
         assertTrue(info.gcodeHandbook.isNotEmpty())
     }
+
+    @Test
+    fun testComplexSurfaceMillingUseCase() {
+        val useCase = ComplexSurfaceMillingUseCase()
+        val res = useCase.calculateBallNoseMilling(
+            cutterDiameterMm = 10.0,
+            apMm = 0.5,
+            aeMm = 0.4,
+            fzMmTeeth = 0.08,
+            surfaceAngleDeg = 30.0
+        )
+
+        assertTrue(res.effectiveDiameterMm > 0)
+        assertTrue(res.effectiveDiameterMm <= 10.0)
+        assertTrue(res.rpm > 0)
+        assertTrue(res.scallopHeightRzUm > 0)
+    }
+
+    @Test
+    fun testGCodeValidation() {
+        val gcodeEngine = GCodeEngineUseCase()
+
+        // Code with missing feedrate
+        val invalidCode = "G00 X0 Z5\nG01 Z-20"
+        val issues = gcodeEngine.validateGCode(invalidCode, CncSystemType.FANUC)
+
+        assertTrue(issues.any { it.message.contains("подачи F") })
+    }
 }
