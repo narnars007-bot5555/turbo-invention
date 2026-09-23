@@ -53,6 +53,18 @@ class ExportImportUseCase {
         return sb.toString()
     }
 
+    fun exportFanucToolOffsetFile(wearList: List<ToolWearJournalEntity>): String {
+        val sb = StringBuilder()
+        sb.append("%\nO9001 (TOOL WEAR OFFSETS EXPORT)\n")
+        for (item in wearList) {
+            val rawNum = item.toolId.replace(Regex("[^0-9]"), "").toIntOrNull() ?: 1
+            val toolNum = if (rawNum > 99) rawNum / 100 else rawNum
+            sb.append(String.format(Locale.US, "G10 L3 P%02d U%.4f W%.4f ;\n", toolNum, item.measuredWearXMm, item.measuredWearZMm))
+        }
+        sb.append("M30\n%")
+        return sb.toString()
+    }
+
     fun generateTechnologicalRouteSheetText(sheet: TechnologicalRouteSheet): String {
         val line = "=========================================================================="
         return """

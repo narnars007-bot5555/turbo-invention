@@ -8,6 +8,8 @@ enum class MotionType {
     ARC_CW,         // G02
     ARC_CCW,        // G03
     DRILL_CYCLE,    // G81 / G83
+    TURNING_CYCLE,  // G71 / G72 / G73 / CYCLE95
+    THREAD_CYCLE,   // G76 / CYCLE97
     DWELL           // G04
 }
 
@@ -74,8 +76,9 @@ class GCodeParserUseCase {
             else if (clean.contains("G01") || clean.contains("G1 ") || clean.endsWith("G1")) currentMotion = MotionType.LINEAR
             else if (clean.contains("G02") || clean.contains("G2 ") || clean.endsWith("G2")) currentMotion = MotionType.ARC_CW
             else if (clean.contains("G03") || clean.contains("G3 ") || clean.endsWith("G3")) currentMotion = MotionType.ARC_CCW
-            else if (clean.contains("G81")) currentMotion = MotionType.DRILL_CYCLE
-            else if (clean.contains("G83")) currentMotion = MotionType.DRILL_CYCLE
+            else if (clean.contains("G71") || clean.contains("G72") || clean.contains("G73") || clean.contains("CYCLE95")) currentMotion = MotionType.TURNING_CYCLE
+            else if (clean.contains("G76") || clean.contains("CYCLE97")) currentMotion = MotionType.THREAD_CYCLE
+            else if (clean.contains("G81") || clean.contains("G83")) currentMotion = MotionType.DRILL_CYCLE
 
             // Parse Feed, Speed, Tool
             val tokens = clean.split(" ")
@@ -85,9 +88,11 @@ class GCodeParserUseCase {
             var iVal = 0f
             var jVal = 0f
             var rVal = 0f
+            var depthU = 2.0f
+            var pitchF = 1.5f
 
             for (token in tokens) {
-                if (token.startsWith("F")) token.drop(1).toFloatOrNull()?.let { currentF = it }
+                if (token.startsWith("F")) token.drop(1).toFloatOrNull()?.let { currentF = it; pitchF = it }
                 else if (token.startsWith("S")) token.drop(1).toFloatOrNull()?.let { currentS = it }
                 else if (token.startsWith("T")) token.drop(1).toIntOrNull()?.let { currentT = it }
                 else if (token.startsWith("X")) token.drop(1).toFloatOrNull()?.let { newX = it }
@@ -96,6 +101,7 @@ class GCodeParserUseCase {
                 else if (token.startsWith("I")) token.drop(1).toFloatOrNull()?.let { iVal = it }
                 else if (token.startsWith("J")) token.drop(1).toFloatOrNull()?.let { jVal = it }
                 else if (token.startsWith("R")) token.drop(1).toFloatOrNull()?.let { rVal = it }
+                else if (token.startsWith("U")) token.drop(1).toFloatOrNull()?.let { depthU = it }
             }
 
             val startX = currentX
@@ -104,8 +110,29 @@ class GCodeParserUseCase {
 
             val arcPoints = mutableListOf<Pair<Float, Float>>()
 
-            // Arc interpolation calculation for G02 / G03
-            if (currentMotion == MotionType.ARC_CW || currentMotion == MotionType.ARC_CCW) {
+            // Multi-pass G71 / CYCLE95 Turning Cycle expansion
+            if (currentMotion == MotionType.TURNING_CYCLE) {
+                val passes = 4
+                val passDepth = depthU / passes
+                for (pass in 1..passes) {
+                    val passX = startX - pass * passDepth
+                    toolpathPoints.add(ToolpathPoint(passX, startY, isRapid = false))
+                    toolpathPoints.add(ToolpathPoint(passX, newZ, isRapid = false))
+                    toolpathPoints.add(ToolpathPoint(startX, newZ, isRapid = true))
+                    toolpathPoints.add(ToolpathPoint(startX, startY, isRapid = true))
+                }
+            } else if (currentMotion == MotionType.THREAD_CYCLE) {
+                // Multi-pass G76 / CYCLE97 Threading Cycle expansion
+                val threadDepth = 0.6134f * pitchF
+                val passes = 5
+                for (pass in 1..passes) {
+                    val passX = startX - (pass.toFloat() / passes) * threadDepth * 2f
+                    toolpathPoints.add(ToolpathPoint(passX, startY, isRapid = true))
+                    toolpathPoints.add(ToolpathPoint(passX, newZ, isRapid = false))
+                    toolpathPoints.add(ToolpathPoint(startX, newZ, isRapid = true))
+                    toolpathPoints.add(ToolpathPoint(startX, startY, isRapid = true))
+                }
+            } else if (currentMotion == MotionType.ARC_CW || currentMotion == MotionType.ARC_CCW) {
                 val cx = startX + iVal
                 val cy = startY + jVal
                 val radius = if (rVal != 0f) abs(rVal) else hypot(iVal.toDouble(), jVal.toDouble()).toFloat()

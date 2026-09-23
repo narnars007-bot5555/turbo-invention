@@ -34,7 +34,10 @@ data class BleMeasurementPacket(
     val targetAxis: String = "X", // X, Z, Y
     val batteryPercent: Int = 95,
     val rawHex: String = ""
-)
+) {
+    val valueInInches: Double
+        get() = measuredValueMm / 25.4
+}
 
 class BleMeasurementManager(
     private val context: Context? = null
@@ -58,6 +61,9 @@ class BleMeasurementManager(
 
     private var activeDevice: BleGaugeDevice? = null
 
+    // Buffer for median sliding filter (window size = 5)
+    private val filterWindow = LinkedList<Double>()
+
     fun startDiscovery() {
         _connectionState.value = BleConnectionState.DISCOVERING
     }
@@ -75,11 +81,24 @@ class BleMeasurementManager(
     fun disconnect() {
         _connectionState.value = BleConnectionState.DISCONNECTED
         activeDevice = null
+        filterWindow.clear()
+    }
+
+    fun applyMedianFilter(rawValMm: Double): Double {
+        synchronized(filterWindow) {
+            filterWindow.add(rawValMm)
+            if (filterWindow.size > 5) {
+                filterWindow.removeFirst()
+            }
+            val sorted = filterWindow.sorted()
+            return sorted[sorted.size / 2]
+        }
     }
 
     fun simulateIncomingMeasurement(measuredMm: Double, axis: String = "X") {
+        val filteredValue = applyMedianFilter(measuredMm)
         val packet = BleMeasurementPacket(
-            measuredValueMm = measuredMm,
+            measuredValueMm = filteredValue,
             timestamp = System.currentTimeMillis(),
             targetAxis = axis,
             batteryPercent = 92
@@ -90,11 +109,11 @@ class BleMeasurementManager(
     fun parseBlePacketBytes(data: ByteArray, targetAxis: String = "X"): BleMeasurementPacket? {
         if (data.isEmpty()) return null
         return try {
-            // Standard SPC / BLE measurement packet parsing (4-byte float or string)
             val str = String(data).trim()
             val valMm = str.toDoubleOrNull() ?: (data[0].toInt() and 0xFF) / 100.0
+            val filteredVal = applyMedianFilter(valMm)
             BleMeasurementPacket(
-                measuredValueMm = valMm,
+                measuredValueMm = filteredVal,
                 timestamp = System.currentTimeMillis(),
                 targetAxis = targetAxis,
                 rawHex = data.joinToString("") { String.format("%02X", it) }
