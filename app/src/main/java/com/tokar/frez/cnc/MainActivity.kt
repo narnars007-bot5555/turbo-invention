@@ -57,7 +57,7 @@ class MainActivity : ComponentActivity() {
         )
 
         val catalogViewModel = MachineCatalogViewModel(repository)
-        val toolWearViewModel = ToolWearViewModel()
+        val toolWearViewModel = ToolWearViewModel(repository = repository)
         val gcodeViewModel = GCodeViewModel()
 
         setContent {

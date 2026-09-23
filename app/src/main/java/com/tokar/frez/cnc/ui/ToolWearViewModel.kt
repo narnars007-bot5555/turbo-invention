@@ -1,11 +1,19 @@
 package com.tokar.frez.cnc.ui
 
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.tokar.frez.cnc.data.ble.BleConnectionState
+import com.tokar.frez.cnc.data.ble.BleGaugeDevice
+import com.tokar.frez.cnc.data.ble.BleMeasurementManager
+import com.tokar.frez.cnc.data.ble.BleMeasurementPacket
+import com.tokar.frez.cnc.data.entity.ToolWearJournalEntity
+import com.tokar.frez.cnc.data.repository.CncRepository
 import com.tokar.frez.cnc.domain.usecase.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 
 data class ToolWearUiState(
     val nominalMm: Double = 50.0,
@@ -14,11 +22,16 @@ data class ToolWearUiState(
     val measuredZActualMm: Double = 99.85,
     val mode: CompensationMode = CompensationMode.DIAMETER,
     val cncSystem: CncSystemType = CncSystemType.FANUC,
-    val result: ToolWearResult? = null
+    val result: ToolWearResult? = null,
+    val bleConnectionState: BleConnectionState = BleConnectionState.DISCONNECTED,
+    val bleDevices: List<BleGaugeDevice> = emptyList(),
+    val latestBlePacket: BleMeasurementPacket? = null
 )
 
 class ToolWearViewModel(
-    private val toolWearUseCase: ToolWearUseCase = ToolWearUseCase()
+    private val toolWearUseCase: ToolWearUseCase = ToolWearUseCase(),
+    private val bleManager: BleMeasurementManager = BleMeasurementManager(),
+    private val repository: CncRepository? = null
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ToolWearUiState())
@@ -26,6 +39,62 @@ class ToolWearViewModel(
 
     init {
         calculate()
+        observeBleManager()
+    }
+
+    private fun observeBleManager() {
+        viewModelScope.launch {
+            bleManager.connectionState.collect { connState ->
+                _uiState.update { it.copy(bleConnectionState = connState) }
+            }
+        }
+        viewModelScope.launch {
+            bleManager.discoveredDevices.collect { devList ->
+                _uiState.update { it.copy(bleDevices = devList) }
+            }
+        }
+        viewModelScope.launch {
+            bleManager.latestMeasurement.collect { packet ->
+                _uiState.update { it.copy(latestBlePacket = packet) }
+                if (packet != null) {
+                    updateInputs(actual = packet.measuredValueMm)
+                }
+            }
+        }
+    }
+
+    fun startBleDiscovery() {
+        bleManager.startDiscovery()
+    }
+
+    fun connectBleDevice(device: BleGaugeDevice) {
+        bleManager.connectToDevice(device)
+    }
+
+    fun disconnectBle() {
+        bleManager.disconnect()
+    }
+
+    fun simulateBleMeasurement(valMm: Double, axis: String = "X") {
+        bleManager.simulateIncomingMeasurement(valMm, axis)
+    }
+
+    fun saveWearLogToDb(toolId: String, partCount: Int, timeMin: Double, wearX: Double, wearZ: Double, cause: String) {
+        val forecast = toolWearUseCase.forecastToolLife(toolId, wearX, wearZ, cause = cause)
+        val entity = ToolWearJournalEntity(
+            toolId = toolId,
+            partCount = partCount,
+            operatingTimeMin = timeMin,
+            measuredWearXMm = wearX,
+            measuredWearZMm = wearZ,
+            measuredWearYMm = 0.0,
+            cause = cause,
+            remainingLifePercent = forecast.remainingLifePercent,
+            comment = "Автоматический замер BLE"
+        )
+        viewModelScope.launch {
+            repository?.saveToolWearLog(entity)
+        }
     }
 
     fun updateInputs(

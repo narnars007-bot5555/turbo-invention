@@ -16,11 +16,15 @@ data class GCodeUiState(
     val feedRate: Double = 0.25,
     val cncSystem: CncSystemType = CncSystemType.FANUC,
     val generatedGCode: String = "",
-    val toolpathPoints: List<ToolpathPoint> = emptyList()
+    val toolpathPoints: List<ToolpathPoint> = emptyList(),
+    val parsedBlocks: List<ParsedGCodeBlock> = emptyList(),
+    val estimatedTimeSec: Double = 0.0,
+    val totalDistanceMm: Double = 0.0
 )
 
 class GCodeViewModel(
-    private val gcodeEngine: GCodeEngineUseCase = GCodeEngineUseCase()
+    private val gcodeEngine: GCodeEngineUseCase = GCodeEngineUseCase(),
+    private val gcodeParser: GCodeParserUseCase = GCodeParserUseCase()
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(GCodeUiState())
@@ -53,6 +57,19 @@ class GCodeViewModel(
         generateAndParse()
     }
 
+    fun parseCustomGCode(rawCode: String) {
+        val parseResult = gcodeParser.parseProgram(rawCode)
+        _uiState.update {
+            it.copy(
+                generatedGCode = rawCode,
+                toolpathPoints = parseResult.toolpathPoints,
+                parsedBlocks = parseResult.blocks,
+                estimatedTimeSec = parseResult.estimatedTimeSec,
+                totalDistanceMm = parseResult.totalDistanceMm
+            )
+        }
+    }
+
     private fun generateAndParse() {
         val s = _uiState.value
         val params = GCodeGenerationParams(
@@ -64,9 +81,16 @@ class GCodeViewModel(
             feedRate = s.feedRate
         )
         val code = gcodeEngine.generateCycleGCode(params, s.cncSystem)
-        val points = gcodeEngine.parseToolpath(code)
+        val parseResult = gcodeParser.parseProgram(code)
+
         _uiState.update {
-            it.copy(generatedGCode = code, toolpathPoints = points)
+            it.copy(
+                generatedGCode = code,
+                toolpathPoints = parseResult.toolpathPoints,
+                parsedBlocks = parseResult.blocks,
+                estimatedTimeSec = parseResult.estimatedTimeSec,
+                totalDistanceMm = parseResult.totalDistanceMm
+            )
         }
     }
 }
