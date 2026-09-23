@@ -19,7 +19,18 @@ data class GCodeGenerationParams(
     val peckDepthMm: Double = 2.0
 )
 
+fun hasSafeTermination(program: String): Boolean {
+    val upper = program.uppercase()
+    val hasRetract = upper.contains("G00") || upper.contains("G0 ")
+    val hasCoolantOff = upper.contains("M09") || upper.contains("M9")
+    val hasSpindleStop = upper.contains("M05") || upper.contains("M5")
+    val hasProgramEnd = upper.contains("M30") || upper.contains("M02") || upper.contains("M2") || upper.contains("END PGM")
+    return hasRetract && hasCoolantOff && hasSpindleStop && hasProgramEnd
+}
+
 class GCodeEngineUseCase {
+
+    fun hasSafeTermination(program: String): Boolean = com.tokar.frez.cnc.domain.usecase.hasSafeTermination(program)
 
     fun parseToolpath(gcodeText: String): List<ToolpathPoint> {
         val points = mutableListOf<ToolpathPoint>()
