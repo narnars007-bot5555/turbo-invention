@@ -1,9 +1,17 @@
 package com.tokar.frez.cnc.data.repository
 
+import android.content.Context
 import com.tokar.frez.cnc.data.dao.*
 import com.tokar.frez.cnc.data.entity.*
+import com.tokar.frez.cnc.data.models.CncDatabase
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.withContext
+import kotlinx.serialization.json.Json
 
 class CncRepository(
     private val materialDao: MaterialDao,
@@ -16,10 +24,35 @@ class CncRepository(
     private val toolWearJournalDao: ToolWearJournalDao? = null
 ) {
 
+    private val jsonParser = Json { ignoreUnknownKeys = true; isLenient = true }
+
+    private val _cncDatabaseState = MutableStateFlow<CncDatabase?>(null)
+    val cncDatabaseState: StateFlow<CncDatabase?> = _cncDatabaseState.asStateFlow()
+
     private var cachedMaterials: List<MaterialEntity>? = null
     private var cachedThreads: List<ThreadEntity>? = null
     private var cachedCycles: List<CncCycleEntity>? = null
     private var cachedTools: List<ToolFixtureEntity>? = null
+
+    suspend fun loadCncDatabaseFromAssets(context: Context): CncDatabase? {
+        return withContext(Dispatchers.IO) {
+            try {
+                val jsonString = context.assets.open("database/cnc_database.json")
+                    .bufferedReader()
+                    .use { it.readText() }
+                val parsed = jsonParser.decodeFromString<CncDatabase>(jsonString)
+                _cncDatabaseState.value = parsed
+                parsed
+            } catch (e: Exception) {
+                e.printStackTrace()
+                null
+            }
+        }
+    }
+
+    fun parseCncDatabaseJsonString(jsonString: String): CncDatabase {
+        return jsonParser.decodeFromString(jsonString)
+    }
 
     fun getMaterialsFlow(): Flow<List<MaterialEntity>> = flow {
         cachedMaterials?.let { emit(it) }

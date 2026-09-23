@@ -16,16 +16,22 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.tokar.frez.cnc.data.db.AppDatabase
+import com.tokar.frez.cnc.data.models.CncModel
+import com.tokar.frez.cnc.data.models.Hotspot
+import com.tokar.frez.cnc.data.models.Scenario
+import com.tokar.frez.cnc.data.models.ScenarioStep
 import com.tokar.frez.cnc.data.repository.CncRepository
 import com.tokar.frez.cnc.ui.*
 import com.tokar.frez.cnc.ui.screens.*
 import com.tokar.frez.cnc.ui.screens.catalog.MachineCatalogScreen
 import com.tokar.frez.cnc.ui.screens.gcode.GCodeGeneratorScreen
 import com.tokar.frez.cnc.ui.screens.iso.IsoToleranceScreen
+import com.tokar.frez.cnc.ui.screens.simulator.CncSimulatorScreen
 import com.tokar.frez.cnc.ui.screens.turning.TurningMillingScreen
 import com.tokar.frez.cnc.ui.screens.wear.ToolWearScreen
 import com.tokar.frez.cnc.ui.theme.*
@@ -57,6 +63,36 @@ class MainActivity : ComponentActivity() {
         setContent {
             val state by mainViewModel.uiState.collectAsState()
             var isSettingsOpen by remember { mutableStateOf(false) }
+            val context = LocalContext.current
+
+            val cncDbState by repository.cncDatabaseState.collectAsState()
+
+            LaunchedEffect(Unit) {
+                repository.loadCncDatabaseFromAssets(context)
+            }
+
+            val defaultFanucModel = CncModel(
+                id = "fanuc_0i_tf",
+                name = "Fanuc 0i-TF Plus",
+                type = "Токарная обработка",
+                image_panel = "panels/fanuc_0i_tf.jpg",
+                model_3d = "models/lathe_fanuc.glb",
+                hotspots = listOf(
+                    Hotspot("btn_mode_auto", "Режим AUTO (MEM)", 65.4f, 82.1f, 22, "Автоматический режим исполнения программы.", "Режимы работы"),
+                    Hotspot("btn_mode_ref", "Режим REF / HOME", 60.1f, 82.1f, 22, "Режим выхода станка в физический ноль.", "Режимы работы"),
+                    Hotspot("btn_cycle_start", "CYCLE START", 88.5f, 88.0f, 28, "Запуск выполнения программы.", "Управление")
+                ),
+                scenarios = listOf(
+                    Scenario(
+                        id = "ref_return",
+                        title = "Выход станка в ноль (REF)",
+                        steps = listOf(
+                            ScenarioStep(1, "Нажмите и активируйте режим REF на пульте.", "btn_mode_ref"),
+                            ScenarioStep(2, "Запустите зануление кнопкой CYCLE START.", "btn_cycle_start")
+                        )
+                    )
+                )
+            )
 
             TokarFrezCncTheme(useDarkTheme = state.appTheme != AppThemeMode.LIGHT) {
                 Scaffold(
@@ -70,7 +106,7 @@ class MainActivity : ComponentActivity() {
                                             1 -> "G-КОД И ЧПУ"
                                             2 -> "ИНСТРУМЕНТ И ИЗНОС"
                                             3 -> "ISO И СПРАВОЧНИКИ"
-                                            4 -> "СТАНКИ И ОСНАСТКА"
+                                            4 -> "СТАНКИ И СИМУЛЯТОР СТОЙКИ"
                                             else -> "TOKAR-FREZ-CNC"
                                         },
                                         fontSize = 16.sp,
@@ -130,7 +166,7 @@ class MainActivity : ComponentActivity() {
                                 Triple("G-код", Icons.Default.Code, 1),
                                 Triple("Износ", Icons.Default.Build, 2),
                                 Triple("ISO", Icons.Default.MenuBook, 3),
-                                Triple("Станки", Icons.Default.PrecisionManufacturing, 4)
+                                Triple("Симулятор", Icons.Default.PrecisionManufacturing, 4)
                             )
                             items.forEach { (label, icon, catIdx) ->
                                 NavigationBarItem(
@@ -187,7 +223,10 @@ class MainActivity : ComponentActivity() {
                                 1 -> GCodeGeneratorScreen(gcodeViewModel)
                                 2 -> ToolWearScreen(toolWearViewModel)
                                 3 -> IsoToleranceScreen(mainViewModel, state)
-                                4 -> MachineCatalogScreen(catalogViewModel)
+                                4 -> {
+                                    val activeCncModel = cncDbState?.brands?.firstOrNull()?.models?.firstOrNull() ?: defaultFanucModel
+                                    CncSimulatorScreen(cncModel = activeCncModel)
+                                }
                                 else -> DashboardScreen(
                                     viewModel = mainViewModel,
                                     state = state,
