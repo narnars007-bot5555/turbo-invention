@@ -57,8 +57,12 @@ class ExportImportUseCase {
         val sb = StringBuilder()
         sb.append("%\nO9001 (TOOL WEAR OFFSETS EXPORT)\n")
         for (item in wearList) {
-            val rawNum = item.toolId.replace(Regex("[^0-9]"), "").toIntOrNull() ?: 1
-            val toolNum = if (rawNum > 99) rawNum / 100 else rawNum
+            val digits = item.toolId.filter { it.isDigit() }
+            val toolNum = when {
+                digits.length >= 4 -> digits.take(2).toIntOrNull() ?: 1
+                digits.isNotEmpty() -> digits.toIntOrNull() ?: 1
+                else -> 1
+            }.coerceIn(1, 99)
             sb.append(String.format(Locale.US, "G10 L3 P%02d U%.4f W%.4f ;\n", toolNum, item.measuredWearXMm, item.measuredWearZMm))
         }
         sb.append("M30\n%")

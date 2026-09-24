@@ -20,6 +20,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.tokar.frez.cnc.data.db.AppDatabase
 import com.tokar.frez.cnc.data.models.CncModel
 import com.tokar.frez.cnc.data.models.Hotspot
@@ -56,16 +59,32 @@ class MainActivity : ComponentActivity() {
             db.toolWearJournalDao()
         )
 
-        val catalogViewModel = MachineCatalogViewModel(repository)
-        val toolWearViewModel = ToolWearViewModel(repository = repository)
-        val gcodeViewModel = GCodeViewModel()
-
         setContent {
             val state by mainViewModel.uiState.collectAsState()
             var isSettingsOpen by remember { mutableStateOf(false) }
             val context = LocalContext.current
 
             val cncDbState by repository.cncDatabaseState.collectAsState()
+
+            val toolWearViewModel: ToolWearViewModel = viewModel(
+                factory = object : ViewModelProvider.Factory {
+                    override fun <T : ViewModel> create(modelClass: Class<T>): T {
+                        @Suppress("UNCHECKED_CAST")
+                        return ToolWearViewModel(repository = repository) as T
+                    }
+                }
+            )
+
+            val catalogViewModel: MachineCatalogViewModel = viewModel(
+                factory = object : ViewModelProvider.Factory {
+                    override fun <T : ViewModel> create(modelClass: Class<T>): T {
+                        @Suppress("UNCHECKED_CAST")
+                        return MachineCatalogViewModel(repository) as T
+                    }
+                }
+            )
+
+            val gcodeViewModel: GCodeViewModel = viewModel()
 
             LaunchedEffect(Unit) {
                 repository.loadCncDatabaseFromAssets(context)
@@ -75,8 +94,8 @@ class MainActivity : ComponentActivity() {
                 id = "fanuc_0i_tf",
                 name = "Fanuc 0i-TF Plus",
                 type = "Токарная обработка",
-                image_panel = "panels/fanuc_0i_tf.jpg",
-                model_3d = "models/lathe_fanuc.glb",
+                imagePanel = "panels/fanuc_0i_tf.jpg",
+                model3d = "models/lathe_fanuc.glb",
                 hotspots = listOf(
                     Hotspot("btn_mode_auto", "Режим AUTO (MEM)", 65.4f, 82.1f, 22, "Автоматический режим исполнения программы.", "Режимы работы"),
                     Hotspot("btn_mode_ref", "Режим REF / HOME", 60.1f, 82.1f, 22, "Режим выхода станка в физический ноль.", "Режимы работы"),

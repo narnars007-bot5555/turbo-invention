@@ -90,7 +90,7 @@ fun CncSimulatorScreen(
         // Tab Contents
         when (selectedTab) {
             0 -> {
-                Cnc3DViewer(modelPath = cncModel.model_3d)
+                Cnc3DViewer(modelPath = cncModel.model3d)
             }
             1 -> {
                 CncPanelViewer(
@@ -231,9 +231,9 @@ fun CncSimulatorScreen(
                         Box(modifier = Modifier.weight(1f)) {
                             CncPanelViewer(
                                 model = cncModel,
-                                targetHotspotId = if (!scenarioCompleted) currentStep?.target_hotspot else null,
+                                targetHotspotId = if (!scenarioCompleted) currentStep?.targetHotspot else null,
                                 onHotspotClick = { clickedHs ->
-                                    if (currentStep != null && clickedHs.id == currentStep.target_hotspot) {
+                                    if (currentStep != null && clickedHs.id == currentStep.targetHotspot) {
                                         if (currentStepIndex + 1 < (activeScenario?.steps?.size ?: 0)) {
                                             currentStepIndex++
                                         } else {

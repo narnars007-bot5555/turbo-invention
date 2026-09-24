@@ -72,13 +72,13 @@ class SimulatorRepositoryTest {
 
         val hotspot = model.hotspots.first()
         assertEquals("btn_mode_ref", hotspot.id)
-        assertEquals(60.1f, hotspot.x_percent, 0.01f)
-        assertEquals(82.1f, hotspot.y_percent, 0.01f)
+        assertEquals(60.1f, hotspot.xPercent, 0.01f)
+        assertEquals(82.1f, hotspot.yPercent, 0.01f)
 
         val scenario = model.scenarios.first()
         assertEquals("ref_return", scenario.id)
         assertEquals(1, scenario.steps.size)
-        assertEquals("btn_mode_ref", scenario.steps.first().target_hotspot)
+        assertEquals("btn_mode_ref", scenario.steps.first().targetHotspot)
     }
 
     @Test
@@ -86,8 +86,8 @@ class SimulatorRepositoryTest {
         val hotspot = Hotspot(
             id = "btn_cycle_start",
             title = "CYCLE START",
-            x_percent = 50.0f,
-            y_percent = 80.0f,
+            xPercent = 50.0f,
+            yPercent = 80.0f,
             description = "Start button",
             category = "Control"
         )
@@ -95,8 +95,8 @@ class SimulatorRepositoryTest {
         val screenWidth = 1000f
         val screenHeight = 2000f
 
-        val calculatedX = (hotspot.x_percent / 100f) * screenWidth
-        val calculatedY = (hotspot.y_percent / 100f) * screenHeight
+        val calculatedX = (hotspot.xPercent / 100f) * screenWidth
+        val calculatedY = (hotspot.yPercent / 100f) * screenHeight
 
         assertEquals(500f, calculatedX, 0.1f)
         assertEquals(1600f, calculatedY, 0.1f)
@@ -111,7 +111,7 @@ class SimulatorRepositoryTest {
         assertEquals(2, scenario.steps.size)
 
         var currentStepIndex = 0
-        val targetStep1 = scenario.steps[currentStepIndex].target_hotspot
+        val targetStep1 = scenario.steps[currentStepIndex].targetHotspot
         assertEquals("btn_mode_ref", targetStep1)
 
         // Simulate correct button tap on step 1
@@ -121,7 +121,7 @@ class SimulatorRepositoryTest {
         }
 
         assertEquals(1, currentStepIndex)
-        val targetStep2 = scenario.steps[currentStepIndex].target_hotspot
+        val targetStep2 = scenario.steps[currentStepIndex].targetHotspot
         assertEquals("btn_cycle_start", targetStep2)
     }
 }

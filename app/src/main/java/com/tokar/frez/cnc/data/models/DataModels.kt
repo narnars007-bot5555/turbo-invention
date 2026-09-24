@@ -1,5 +1,6 @@
 package com.tokar.frez.cnc.data.models
 
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -20,8 +21,8 @@ data class CncModel(
     val id: String,
     val name: String,
     val type: String,
-    val image_panel: String,
-    val model_3d: String? = null,
+    @SerialName("image_panel") val imagePanel: String,
+    @SerialName("model_3d") val model3d: String? = null,
     val hotspots: List<Hotspot> = emptyList(),
     val scenarios: List<Scenario> = emptyList()
 )
@@ -30,9 +31,9 @@ data class CncModel(
 data class Hotspot(
     val id: String,
     val title: String,
-    val x_percent: Float,
-    val y_percent: Float,
-    val radius_dp: Int = 22,
+    @SerialName("x_percent") val xPercent: Float,
+    @SerialName("y_percent") val yPercent: Float,
+    @SerialName("radius_dp") val radiusDp: Int = 22,
     val description: String,
     val category: String
 )
@@ -48,5 +49,5 @@ data class Scenario(
 data class ScenarioStep(
     val step: Int,
     val instruction: String,
-    val target_hotspot: String
+    @SerialName("target_hotspot") val targetHotspot: String
 )

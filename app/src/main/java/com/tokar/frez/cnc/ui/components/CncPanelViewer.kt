@@ -72,10 +72,10 @@ fun CncPanelViewer(
 
                         // Find clicked hotspot
                         val clicked = model.hotspots.find { hs ->
-                            val hx = (hs.x_percent / 100f) * w * zoomScale + panOffsetX
-                            val hy = (hs.y_percent / 100f) * h * zoomScale + panOffsetY
-                            val radiusPx = with(density) { hs.radius_dp.dp.toPx() } * zoomScale
-                            hypot(tapOffset.x - hx, tapOffset.y - hy) <= radiusPx * 1.5f
+                            val hx = (hs.xPercent / 100f) * w * zoomScale + panOffsetX
+                            val hy = (hs.yPercent / 100f) * h * zoomScale + panOffsetY
+                            val radiusPx = with(density) { hs.radiusDp.dp.toPx() } * zoomScale
+                            hypot((tapOffset.x - hx).toDouble(), (tapOffset.y - hy).toDouble()) <= radiusPx * 1.5f
                         }
 
                         clicked?.let { hs ->
@@ -97,9 +97,9 @@ fun CncPanelViewer(
 
             // Draw hotspots vector layer
             model.hotspots.forEach { hs ->
-                val hx = (hs.x_percent / 100f) * canvasW * zoomScale + panOffsetX
-                val hy = (hs.y_percent / 100f) * canvasH * zoomScale + panOffsetY
-                val baseRadiusPx = density.run { hs.radius_dp.dp.toPx() } * zoomScale
+                val hx = (hs.xPercent / 100f) * canvasW * zoomScale + panOffsetX
+                val hy = (hs.yPercent / 100f) * canvasH * zoomScale + panOffsetY
+                val baseRadiusPx = density.run { hs.radiusDp.dp.toPx() } * zoomScale
 
                 val isTarget = targetHotspotId != null && hs.id == targetHotspotId
                 val isDimmed = targetHotspotId != null && !isTarget
